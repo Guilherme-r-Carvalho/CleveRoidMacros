@@ -1,6 +1,6 @@
 --[[
-	Author: Dennis Werner Garske (DWG) / brian / Mewtiny / brian / Mewtiny
-	License: MIT License
+    Author: Dennis Werner Garske (DWG) / brian / Mewtiny / brian / Mewtiny
+    License: MIT License
 ]]
 
 -- Setup to wrap our stuff in a table so we don't pollute the global environment
@@ -8,6 +8,10 @@ local _G = _G or getfenv(0)
 local CleveRoids = _G.CleveRoids or {}
 _G.CleveRoids = CleveRoids
 
+-- Initialize CombatLog table and related variables
+CleveRoids.CombatLog = CleveRoids.CombatLog or {}
+local MAX_COMBAT_LOG_ENTRIES = 200  -- Adjust as needed
+local eventFrame = getglobal("CleveRoidsEventFrame") or CreateFrame("Frame", "CleveRoidsEventFrame")
 
 function CleveRoids.GetSpellCost(spellSlot, bookType)
     CleveRoids.Frame:SetOwner(WorldFrame, "ANCHOR_NONE")
@@ -86,6 +90,18 @@ function CleveRoids.TestForActiveAction(actions)
         else
             actions.active.inRange = 1
             actions.active.usable = 1
+        end
+    end
+end
+
+function CleveRoids.AddCombatLogEntry(msg, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    if string.find(msg, "Your %a+ hits") or string.find(msg, "You cast") then
+        local args = {arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9}  -- Manually handle arguments
+        table.insert(CleveRoids.CombatLog, {msg = msg, args = args})
+
+        -- Use table.getn() instead of #
+        if table.getn(CleveRoids.CombatLog) > MAX_COMBAT_LOG_ENTRIES then
+            table.remove(CleveRoids.CombatLog, 1)
         end
     end
 end
@@ -1362,6 +1378,18 @@ function CleveRoids.Frame:STOP_AUTOREPEAT_SPELL()
     end
 end
 
+-- Register and Unregister Combat Log Event
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")  -- Captures spell-related combat logs
+eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")  -- Captures melee attacks
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE") -- DoTs
+eventFrame:SetScript("OnEvent", function()
+    CleveRoids.AddCombatLogEntry(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+end)
+
+function CleveRoids.OnDisable() -- Call this when the addon is disabled
+    eventFrame:UnregisterEvent("EVENT_COMBAT_LOG_EVENT_UNFILTERED")
+    CleveRoids.CombatLog = {} -- Clear the combat log on disable
+end
 
 CleveRoids.Hooks.SendChatMessage = SendChatMessage
 function SendChatMessage(msg, ...)
