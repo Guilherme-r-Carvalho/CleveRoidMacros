@@ -761,6 +761,36 @@ end
 -- Attempts to target a unit by its name using a set of conditionals
 -- msg: The raw message intercepted from a /target command
 function CleveRoids.DoTarget(msg)
+    msg = CleveRoids.Trim(msg)  -- Important: Trim whitespace!
+
+    -- 1. Check for a simple name (no conditions or modifiers)
+    local targetName = string.gsub(msg, "^%s*(.-)%s*$", "%1") -- Trim whitespace
+    if string.find(targetName, "%[%]") == nil and string.find(targetName, "@") == nil and targetName ~= "" then -- No conditions or @
+        TargetByName(targetName) -- Try WoW's built-in targeting first
+        if UnitExists("target") then -- Check if target acquired
+          return true -- If target acquired, exit
+        end
+        -- if not, try to target by name with case insensitivity
+        for i=1, GetNumPartyMembers()+GetNumRaidMembers() do
+          local name = UnitName("party"..i) or UnitName("raid"..i)
+          if name and string.lower(name) == string.lower(targetName) then
+            TargetByName(name)
+            if UnitExists("target") then -- Check if target acquired
+              return true -- If target acquired, exit
+            end
+          end
+        end
+        for i=1, GetNumNearbyUnits() do
+          local name = UnitName("unit"..i)
+          if name and string.lower(name) == string.lower(targetName) then
+            TargetByName(name)
+            if UnitExists("target") then -- Check if target acquired
+              return true -- If target acquired, exit
+            end
+          end
+        end
+        return true -- Indicate that targeting was handled (even if it failed, let the original take over)
+    end
     local handled = false
 
     local action = function(msg)
