@@ -1418,10 +1418,10 @@ eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
 eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE")
 eventFrame:RegisterEvent("EVENT_COMBAT_LOG_EVENT") -- Correct combat log event for 1.12.1
 
-eventFrame:SetScript("OnEvent", function(self, event, timestamp, ...)
+eventFrame:SetScript("OnEvent", function(self, event, timestamp, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) 
     if event == "EVENT_COMBAT_LOG_EVENT" then
-        local arg = {...}
-        CleveRoids.AddCombatLogEntry(timestamp, event, unpack(arg))
+        local args = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9}
+        CleveRoids.AddCombatLogEntry(timestamp, event, unpack(args)) 
     elseif event == "CHAT_MSG_SPELL_SELF_DAMAGE" or event == "CHAT_MSG_COMBAT_SELF_HITS" or event == "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE" then
         CleveRoids.AddCombatLogEntry(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
     end
