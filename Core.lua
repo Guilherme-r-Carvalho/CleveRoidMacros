@@ -8,10 +8,12 @@ local _G = _G or getfenv(0)
 local CleveRoids = _G.CleveRoids or {}
 _G.CleveRoids = CleveRoids
 
--- Initialize CombatLog table and related variables
 CleveRoids.CombatLog = CleveRoids.CombatLog or {}
-local MAX_COMBAT_LOG_ENTRIES = 200  -- Adjust as needed
-local eventFrame = getglobal("CleveRoidsEventFrame") or CreateFrame("Frame", "CleveRoidsEventFrame")
+local MAX_COMBAT_LOG_ENTRIES = 100
+
+CleveRoids.eventFrame = getglobal("CleveRoidsEventFrame") or CreateFrame("Frame", "CleveRoidsEventFrame")
+local eventFrame = CleveRoids.eventFrame
+
 
 function CleveRoids.GetSpellCost(spellSlot, bookType)
     CleveRoids.Frame:SetOwner(WorldFrame, "ANCHOR_NONE")
@@ -99,7 +101,6 @@ function CleveRoids.AddCombatLogEntry(msg, arg2, arg3, arg4, arg5, arg6, arg7, a
         local args = {arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9}  -- Manually handle arguments
         table.insert(CleveRoids.CombatLog, {msg = msg, args = args})
 
-        -- Use table.getn() instead of #
         if table.getn(CleveRoids.CombatLog) > MAX_COMBAT_LOG_ENTRIES then
             table.remove(CleveRoids.CombatLog, 1)
         end
@@ -761,22 +762,22 @@ end
 -- Attempts to target a unit by its name using a set of conditionals
 -- msg: The raw message intercepted from a /target command
 function CleveRoids.DoTarget(msg)
-    msg = CleveRoids.Trim(msg)  -- Important: Trim whitespace!
+    msg = CleveRoids.Trim(msg)
 
     -- 1. Check for a simple name (no conditions or modifiers)
-    local targetName = string.gsub(msg, "^%s*(.-)%s*$", "%1") -- Trim whitespace
+    local targetName = string.gsub(msg, "^%s*(.-)%s*$", "%1")
     if string.find(targetName, "%[%]") == nil and string.find(targetName, "@") == nil and targetName ~= "" then -- No conditions or @
         TargetByName(targetName) -- Try WoW's built-in targeting first
-        if UnitExists("target") then -- Check if target acquired
-          return true -- If target acquired, exit
+        if UnitExists("target") then
+          return true
         end
         -- if not, try to target by name with case insensitivity
         for i=1, GetNumPartyMembers()+GetNumRaidMembers() do
           local name = UnitName("party"..i) or UnitName("raid"..i)
           if name and string.lower(name) == string.lower(targetName) then
             TargetByName(name)
-            if UnitExists("target") then -- Check if target acquired
-              return true -- If target acquired, exit
+            if UnitExists("target") then
+              return true
             end
           end
         end
@@ -784,8 +785,8 @@ function CleveRoids.DoTarget(msg)
           local name = UnitName("unit"..i)
           if name and string.lower(name) == string.lower(targetName) then
             TargetByName(name)
-            if UnitExists("target") then -- Check if target acquired
-              return true -- If target acquired, exit
+            if UnitExists("target") then
+              return true
             end
           end
         end
@@ -1412,16 +1413,27 @@ function CleveRoids.Frame:STOP_AUTOREPEAT_SPELL()
 end
 
 -- Register and Unregister Combat Log Event
-eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")  -- Captures spell-related combat logs
-eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")  -- Captures melee attacks
-eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE") -- DoTs
-eventFrame:SetScript("OnEvent", function()
-    CleveRoids.AddCombatLogEntry(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
+eventFrame:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
+eventFrame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE")
+eventFrame:RegisterEvent("EVENT_COMBAT_LOG_EVENT") -- Correct combat log event for 1.12.1
+
+eventFrame:SetScript("OnEvent", function(self, event, timestamp, ...)
+    if event == "EVENT_COMBAT_LOG_EVENT" then
+        local arg = {...}
+        CleveRoids.AddCombatLogEntry(timestamp, event, unpack(arg))
+    elseif event == "CHAT_MSG_SPELL_SELF_DAMAGE" or event == "CHAT_MSG_COMBAT_SELF_HITS" or event == "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE" then
+        CleveRoids.AddCombatLogEntry(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
+    end
 end)
 
-function CleveRoids.OnDisable() -- Call this when the addon is disabled
-    eventFrame:UnregisterEvent("EVENT_COMBAT_LOG_EVENT_UNFILTERED")
-    CleveRoids.CombatLog = {} -- Clear the combat log on disable
+function CleveRoids.OnDisable()
+    CleveRoids.eventFrame:UnregisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
+    CleveRoids.eventFrame:UnregisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
+    CleveRoids.eventFrame:UnregisterEvent("CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE")
+    CleveRoids.eventFrame:UnregisterEvent("EVENT_COMBAT_LOG_EVENT") 
+    CleveRoids.CombatLog = {}
+    CleveRoids.eventFrame = nil
 end
 
 CleveRoids.Hooks.SendChatMessage = SendChatMessage
