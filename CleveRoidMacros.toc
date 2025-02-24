@@ -2,7 +2,7 @@
 ## Author: Torio, Mewtiny, DWG, MarcelineVQ, _brain
 ## Title: CleveRoidMacros, with memory optimizations!
 ## Notes: Vanilla macros on steroids!
-## Title-deDE: |cFF4477FFCleveR|r|cFFFFFFFFoid - Weird|r|cFF4477FFer|r|cFFFFFFFF Vibes|r
+## Title-deDE: |cFF4477FFCleveR|r|cFFFFFFFFoidMac|r|cFF4477FFr|r|cFFFFFFFF os|r
 ## Notes-deDE: Vanilla Macros auf Steroide!
 ## Version: 1.10
 ## OptionalDeps: ClassicFocus, FocusFrame, pfUI, SuperMacro, Bongos_ActionBar

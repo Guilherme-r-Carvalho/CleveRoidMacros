@@ -980,7 +980,7 @@ function CleveRoids.OnUpdate(self)
 
     local time = GetTime()
     -- Slow down a bit.
-    if (time - CleveRoids.lastUpdate) < 0.1 then return end
+    if (time - CleveRoids.lastUpdate) < 0.2 then return end
     CleveRoids.lastUpdate = time
 
     if CleveRoids.CurrentSpell.autoAttackLock and (time - CleveRoids.autoAttackLockElapsed) > 0.2 then
@@ -988,19 +988,22 @@ function CleveRoids.OnUpdate(self)
         CleveRoids.CurrentSpell.autoAttackLockElapsed = nil
     end
 
+    local sequences = CleveRoids.Sequences
     for _, sequence in pairs(CleveRoids.Sequences) do
-        if sequence.index > 1 and sequence.reset.secs and (time - sequence.lastUpdate) >= sequence.reset.secs then
-            CleveRoids.ResetSequence(sequence)
+        if sequence.index > 1 and sequence.reset.secs then
+            if (time - sequence.lastUpdate) >= sequence.reset.secs then
+                CleveRoids.ResetSequence(sequence)
+            end
         end
         sequence.active = CleveRoids.TestAction(sequence.cmd, sequence.args)
     end
 
-    for guid,cast in CleveRoids.spell_tracking do
+    local spell_tracking = CleveRoids.spell_tracking
+    for guid, cast in pairs(spell_tracking) do
         if time > cast.expires then
             CleveRoids.spell_tracking[guid] = nil
         end
     end
-
 
     CleveRoids.IndexActionBars()
 end
